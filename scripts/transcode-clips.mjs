@@ -57,9 +57,10 @@ for (const clip of clips) {
   process.stdout.write(`   ⏳  [${done + 1}/${clips.length}] ${clip} ... `);
 
   try {
+    // -map 0:v:0 takes ONLY the first video stream (drops iPhone metadata streams that crash Chrome)
     // -g 24 forces a keyframe every second so Remotion can seek to any frame instantly
     execSync(
-      `ffmpeg -y -i "${sourcePath}" -vf "scale=-2:1920" -c:v libx264 -preset fast -crf 20 -g 24 -keyint_min 24 -force_key_frames "expr:gte(t,n_forced*1)" -pix_fmt yuv420p -an "${tempPath}"`,
+      `ffmpeg -y -i "${sourcePath}" -map 0:v:0 -vf "scale=-2:1920" -c:v libx264 -preset fast -crf 20 -g 24 -keyint_min 24 -force_key_frames "expr:gte(t,n_forced*1)" -pix_fmt yuv420p -movflags +faststart -an "${tempPath}"`,
       { stdio: "ignore" }
     );
 
