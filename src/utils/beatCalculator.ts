@@ -11,6 +11,19 @@ export function getFramesPerBeat(
 }
 
 /**
+ * Derives total composition duration from real detected cut positions.
+ * Adds one average beat interval after the last cut to size the final clip.
+ */
+export function getTotalDurationFromCuts(cutFrames: number[]): number {
+  if (cutFrames.length < 2) return 0;
+  const avgInterval = Math.round(
+    cutFrames.slice(1).reduce((sum, f, i) => sum + (f - cutFrames[i]), 0) /
+      (cutFrames.length - 1)
+  );
+  return cutFrames[cutFrames.length - 1] + avgInterval;
+}
+
+/**
  * Forces total duration to the nearest exact multiple of framesPerBeat so the
  * video loops seamlessly — last cut lands exactly on a beat.
  */

@@ -1,16 +1,14 @@
 import { Composition, registerRoot } from "remotion";
 import { config } from "./config";
 import { DynamicEdit } from "./DynamicEdit";
-import { getFramesPerBeat, getTotalDurationInFrames } from "./utils/beatCalculator";
+import { getFramesPerBeat, getTotalDurationInFrames, getTotalDurationFromCuts } from "./utils/beatCalculator";
 
-const { fps, songBpm, beatMultiplier, targetDurationSeconds } = config;
+const { fps, songBpm, beatMultiplier, targetDurationSeconds, cutFrames } = config;
 
 const framesPerBeat = getFramesPerBeat(songBpm, fps, beatMultiplier);
-const totalDurationInFrames = getTotalDurationInFrames(
-  targetDurationSeconds,
-  fps,
-  framesPerBeat
-);
+const totalDurationInFrames = cutFrames.length >= 2
+  ? getTotalDurationFromCuts(cutFrames)
+  : getTotalDurationInFrames(targetDurationSeconds, fps, framesPerBeat);
 
 export const RemotionRoot: React.FC = () => {
   return (

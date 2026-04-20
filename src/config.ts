@@ -33,6 +33,10 @@ export const config = {
   // Auto-updated by `npm run setup-audio` — or set manually
   songBpm: 166.1,
 
+  // Auto-populated by `npm run setup` — exact beat/transient positions from waveform analysis.
+  // When non-empty this drives all cut timing. Set to [] to fall back to BPM math.
+  cutFrames: [] as number[],
+
   // 1 = cut every beat | 2 = every 2 beats | 4 = every bar (recommended for natural flow)
   beatMultiplier: 4,
 

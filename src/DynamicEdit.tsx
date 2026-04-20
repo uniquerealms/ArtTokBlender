@@ -3,50 +3,94 @@ import { Audio, Sequence, staticFile } from "remotion";
 import { loadFont } from "@remotion/google-fonts/BebasNeue";
 import { config } from "./config";
 import { ClipSequence } from "./ClipSequence";
-import { getFramesPerBeat, getTotalDurationInFrames } from "./utils/beatCalculator";
+import { getFramesPerBeat, getTotalDurationInFrames, getTotalDurationFromCuts } from "./utils/beatCalculator";
 
 const { fontFamily } = loadFont();
 
-const { videoClips, audioSource, fps, songBpm, beatMultiplier, targetDurationSeconds, overlayText, beatOffsetFrames } =
-  config;
-
-const framesPerBeat = getFramesPerBeat(songBpm, fps, beatMultiplier);
-const totalDurationInFrames = getTotalDurationInFrames(
-  targetDurationSeconds,
+const {
+  videoClips,
+  audioSource,
   fps,
-  framesPerBeat
-);
-const numBeats = Math.round(totalDurationInFrames / framesPerBeat);
-const halfBeat = Math.round(framesPerBeat / 2);
-const { clipStartFrom } = config;
+  songBpm,
+  beatMultiplier,
+  targetDurationSeconds,
+  overlayText,
+  beatOffsetFrames,
+  clipStartFrom,
+  cutFrames,
+} = config;
 
-// Loop structure:
-//   [Clip 0: second half] [Clip 1] [Clip 2]... [Clip N] [Clip 0: first half]
-// When YouTube loops: ...first half → second half = clip 0 plays seamlessly across the boundary.
+// ── Sequence generation ───────────────────────────────────────────────────────
+
 type SeqDef = { from: number; duration: number; clipIndex: number; startFrom: number };
-
 const sequences: SeqDef[] = [];
+let totalDurationInFrames: number;
 
-// Opening half — clip 0 entering mid-motion
-sequences.push({ from: beatOffsetFrames, duration: halfBeat, clipIndex: 0, startFrom: clipStartFrom + halfBeat });
+const useCutFrames = cutFrames.length >= 2;
 
-// Middle beats — all other clips at full duration
-for (let i = 1; i < numBeats; i++) {
+if (useCutFrames) {
+  // Waveform-driven: use real beat positions from audio analysis
+  const cuts = cutFrames;
+  const avgInterval = Math.round(
+    cuts.slice(1).reduce((sum, f, i) => sum + (f - cuts[i]), 0) / (cuts.length - 1)
+  );
+  totalDurationInFrames = getTotalDurationFromCuts(cuts);
+
+  // Half of first beat interval — used to split clip 0 across the loop boundary
+  const halfFirst = Math.round((cuts.length > 1 ? cuts[1] - cuts[0] : avgInterval) / 2);
+
+  // Opening half: clip 0 enters mid-motion (second half of its motion arc)
   sequences.push({
-    from: beatOffsetFrames + halfBeat + (i - 1) * Math.round(framesPerBeat),
-    duration: Math.round(framesPerBeat),
-    clipIndex: i % videoClips.length,
+    from: beatOffsetFrames,
+    duration: halfFirst,
+    clipIndex: 0,
+    startFrom: clipStartFrom + halfFirst,
+  });
+
+  // Middle sequences: one clip per detected beat interval
+  for (let i = 0; i < cuts.length; i++) {
+    const from = beatOffsetFrames + halfFirst + (i === 0 ? 0 : cuts[i] - cuts[0]);
+    const duration = i < cuts.length - 1 ? cuts[i + 1] - cuts[i] : avgInterval;
+    sequences.push({
+      from,
+      duration,
+      clipIndex: (i + 1) % videoClips.length,
+      startFrom: clipStartFrom,
+    });
+  }
+
+  // Closing half: clip 0 from beginning of motion — completes the loop
+  sequences.push({
+    from: totalDurationInFrames - halfFirst,
+    duration: halfFirst,
+    clipIndex: 0,
+    startFrom: clipStartFrom,
+  });
+} else {
+  // BPM fallback: evenly spaced cuts from tempo calculation
+  const framesPerBeat = getFramesPerBeat(songBpm, fps, beatMultiplier);
+  totalDurationInFrames = getTotalDurationInFrames(targetDurationSeconds, fps, framesPerBeat);
+  const numBeats = Math.round(totalDurationInFrames / framesPerBeat);
+  const halfBeat = Math.round(framesPerBeat / 2);
+
+  sequences.push({ from: beatOffsetFrames, duration: halfBeat, clipIndex: 0, startFrom: clipStartFrom + halfBeat });
+  for (let i = 1; i < numBeats; i++) {
+    sequences.push({
+      from: beatOffsetFrames + halfBeat + (i - 1) * Math.round(framesPerBeat),
+      duration: Math.round(framesPerBeat),
+      clipIndex: i % videoClips.length,
+      startFrom: clipStartFrom,
+    });
+  }
+  sequences.push({
+    from: beatOffsetFrames + halfBeat + (numBeats - 1) * Math.round(framesPerBeat),
+    duration: halfBeat,
+    clipIndex: 0,
     startFrom: clipStartFrom,
   });
 }
 
-// Closing half — clip 0 from the start of its motion, completes the loop
-sequences.push({
-  from: beatOffsetFrames + halfBeat + (numBeats - 1) * Math.round(framesPerBeat),
-  duration: halfBeat,
-  clipIndex: 0,
-  startFrom: clipStartFrom,
-});
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export const DynamicEdit: React.FC = () => {
   return (
@@ -62,10 +106,8 @@ export const DynamicEdit: React.FC = () => {
         </Sequence>
       ))}
 
-      {/* Audio startFrom skips ahead so beat 1 aligns with the first cut */}
       <Audio src={staticFile(audioSource)} startFrom={beatOffsetFrames} />
 
-      {/* Static text overlay — stays perfectly still while chaos happens below */}
       <div
         style={{
           position: "absolute",
@@ -90,8 +132,7 @@ export const DynamicEdit: React.FC = () => {
             lineHeight: 1.1,
             margin: 0,
             padding: "0 48px",
-            textShadow:
-              "0 0 20px #000, 0 0 40px #000, 3px 3px 0px #000, -3px -3px 0px #000",
+            textShadow: "0 0 20px #000, 0 0 40px #000, 3px 3px 0px #000, -3px -3px 0px #000",
           }}
         >
           {overlayText.seriesName}

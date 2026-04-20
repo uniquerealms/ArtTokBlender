@@ -186,11 +186,33 @@ const detectedBpm = Math.round(mt.tempo * 10) / 10;
 unlinkSync(tempPcmPath);
 console.log(`✅  BPM detected: ${detectedBpm}`);
 
+// ── Extract beat/transient positions → cutFrames ──────────────────────────────
+
+// Read fps and targetDurationSeconds from config to keep them in sync
+const fpsMatch = configText.match(/fps:\s*(\d+)/);
+const targetMatch = configText.match(/targetDurationSeconds:\s*([\d.]+)/);
+const fps = fpsMatch ? parseInt(fpsMatch[1], 10) : 24;
+const targetSecs = targetMatch ? parseFloat(targetMatch[1]) : 13.5;
+const maxFrame = Math.round(targetSecs * fps);
+
+// mt.beats = array of beat positions in seconds detected from the waveform
+const cutFrames = (mt.beats || [])
+  .map((b) => Math.round(b * fps))
+  .filter((f, i, arr) => f <= maxFrame && (i === 0 || f - arr[i - 1] >= 4)); // min 4-frame gap
+
+console.log(`🥁  Detected ${cutFrames.length} beat positions (${cutFrames.slice(0, 5).join(', ')}...)`);
+
+// ── Patch config.ts ───────────────────────────────────────────────────────────
+
 configText = configText.replace(/songBpm:\s*[\d.]+/, `songBpm: ${detectedBpm}`);
+configText = configText.replace(
+  /cutFrames:\s*\[[^\]]*\]/s,
+  `cutFrames: [${cutFrames.join(", ")}]`
+);
 
 // ── Write config once at the end ─────────────────────────────────────────────
 
 writeFileSync(configPath, configText, "utf8");
-console.log(`📝  config.ts — songBpm updated to ${detectedBpm}`);
+console.log(`📝  config.ts — songBpm: ${detectedBpm}, cutFrames: ${cutFrames.length} positions`);
 
 console.log("\n🚀  All done! Run: npm run preview\n");
