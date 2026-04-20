@@ -33,12 +33,16 @@ export const config = {
   // Auto-updated by `npm run setup-audio` — or set manually
   songBpm: 166.1,
 
-  // 1 = cut every beat | 0.5 = cut every half-beat (faster)
-  beatMultiplier: 2,
+  // 1 = cut every beat | 2 = every 2 beats | 4 = every bar (recommended for natural flow)
+  beatMultiplier: 4,
 
-  // Frames to skip at the start of each clip (24 = 1 second at 24fps)
-  // Increase to jump deeper into the motion, e.g. 48 = skip 2 seconds
-  clipStartFrom: 48,
+  // Frames to skip at the start of each clip (24 = 1 sec at 24fps)
+  // Small values catch the beginning of motion so it peaks at the cut point
+  clipStartFrom: 12,
+
+  // Nudge cuts forward in frames to sync with the actual beat in the audio.
+  // Start at 0. If cuts land just BEFORE the beat, increase by 2–3 until it locks in.
+  beatOffsetFrames: 0,
 
   // Artificial zoom effect (scale 1.0 → 1.35 per clip) — off matches the reference style
   crashZoom: false,

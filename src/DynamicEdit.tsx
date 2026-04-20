@@ -7,7 +7,7 @@ import { getFramesPerBeat, getTotalDurationInFrames } from "./utils/beatCalculat
 
 const { fontFamily } = loadFont();
 
-const { videoClips, audioSource, fps, songBpm, beatMultiplier, targetDurationSeconds, overlayText } =
+const { videoClips, audioSource, fps, songBpm, beatMultiplier, targetDurationSeconds, overlayText, beatOffsetFrames } =
   config;
 
 const framesPerBeat = getFramesPerBeat(songBpm, fps, beatMultiplier);
@@ -21,11 +21,11 @@ const numBeats = Math.round(totalDurationInFrames / framesPerBeat);
 export const DynamicEdit: React.FC = () => {
   return (
     <div style={{ width: "100%", height: "100%", backgroundColor: "#000", position: "relative", overflow: "hidden" }}>
-      {/* Beat-cut video sequences */}
+      {/* Beat-cut video sequences — offset shifts the grid to lock cuts onto the beat */}
       {Array.from({ length: numBeats }, (_, i) => (
         <Sequence
           key={i}
-          from={Math.round(i * framesPerBeat)}
+          from={Math.round(i * framesPerBeat) + beatOffsetFrames}
           durationInFrames={Math.round(framesPerBeat)}
         >
           <ClipSequence
@@ -36,8 +36,8 @@ export const DynamicEdit: React.FC = () => {
         </Sequence>
       ))}
 
-      {/* Music — plays for the full composition */}
-      <Audio src={staticFile(audioSource)} />
+      {/* Audio startFrom skips ahead so beat 1 aligns with the first cut */}
+      <Audio src={staticFile(audioSource)} startFrom={beatOffsetFrames} />
 
       {/* Static text overlay — stays perfectly still while chaos happens below */}
       <div
