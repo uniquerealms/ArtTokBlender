@@ -1,0 +1,26 @@
+{
+  "name": "arttokblender",
+  "version": "1.0.0",
+  "description": "Hyper-kinetic beat-synced YouTube Shorts template built with Remotion",
+  "scripts": {
+    "preview": "remotion studio",
+    "render": "remotion render ArtTokBlender out/video.mp4",
+    "setup-audio": "node scripts/setup-audio.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.290",
+    "@remotion/google-fonts": "4.0.290",
+    "@remotion/preload": "4.0.290",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "remotion": "4.0.290"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/react": "18.2.0",
+    "@types/react-dom": "18.2.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "music-tempo": "^1.0.3",
+    "typescript": "5.4.5"
+  }
+}

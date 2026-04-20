@@ -1,0 +1,17 @@
+node_modules/
+dist/
+out/
+
+# Heavy media assets — add these locally, don't commit
+public/*.mp4
+public/*.mov
+public/*.mp3
+public/*.wav
+public/*.aac
+public/*.mkv
+
+# Temp BPM analysis files
+public/_bpm_temp.pcm
+
+# OS
+.DS_Store
