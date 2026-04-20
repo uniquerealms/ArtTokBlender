@@ -66,6 +66,13 @@ export const config = {
   // Alternating color inversion on every other clip — set true to re-enable
   strobeEffect: false,
 
+  // When true, render plays the pre-built public/_edited.mp4 file (run `npm run prerender` first)
+  // and skips the per-clip Sequence rendering. This is the reliable path.
+  usePrerendered: true,
+
+  // Skip audio entirely in the render
+  noAudio: true,
+
   targetDurationSeconds: 13.5,
 
   overlayText: {

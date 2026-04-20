@@ -1,5 +1,5 @@
 import React from "react";
-import { Audio, Sequence, staticFile } from "remotion";
+import { Audio, Sequence, staticFile, Video } from "remotion";
 import { loadFont } from "@remotion/google-fonts/BebasNeue";
 import { config } from "./config";
 import { ClipSequence } from "./ClipSequence";
@@ -19,6 +19,8 @@ const {
   clipStartFrom,
   cutFrames,
   clipOverrides,
+  usePrerendered,
+  noAudio,
 } = config;
 
 // Resolve per-clip startFrom by matching filename substrings against clipOverrides
@@ -89,18 +91,23 @@ if (useCutFrames) {
 export const DynamicEdit: React.FC = () => {
   return (
     <div style={{ width: "100%", height: "100%", backgroundColor: "#000", position: "relative", overflow: "hidden" }}>
-      {sequences.map((seq, i) => (
-        <Sequence key={i} from={seq.from} durationInFrames={seq.duration}>
-          <ClipSequence
-            src={videoClips[seq.clipIndex]}
-            sequenceIndex={i}
-            durationInFrames={seq.duration}
-            startFrom={seq.startFrom}
-          />
-        </Sequence>
-      ))}
+      {usePrerendered ? (
+        // Pre-rendered single-file path: FFmpeg already did the cuts → public/_edited.mp4
+        <Video src={staticFile("_edited.mp4")} muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : (
+        sequences.map((seq, i) => (
+          <Sequence key={i} from={seq.from} durationInFrames={seq.duration}>
+            <ClipSequence
+              src={videoClips[seq.clipIndex]}
+              sequenceIndex={i}
+              durationInFrames={seq.duration}
+              startFrom={seq.startFrom}
+            />
+          </Sequence>
+        ))
+      )}
 
-      <Audio src={staticFile(audioSource)} startFrom={beatOffsetFrames} />
+      {!noAudio && <Audio src={staticFile(audioSource)} startFrom={beatOffsetFrames} />}
 
       <div
         style={{
