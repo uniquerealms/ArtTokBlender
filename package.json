@@ -4,11 +4,12 @@
   "description": "Hyper-kinetic beat-synced YouTube Shorts template built with Remotion",
   "scripts": {
     "preview": "remotion studio",
-    "render": "remotion render ArtTokBlender out/video.mp4 --concurrency=2 --timeout=120000 --jpeg-quality=90",
+    "render": "remotion render ArtTokBlender out/video.mp4 --concurrency=1 --timeout=300000 --jpeg-quality=90",
     "setup-audio": "node scripts/setup-audio.mjs",
     "link-clips": "node scripts/link-clips.mjs",
     "setup": "node scripts/setup.mjs",
-    "match-cuts": "node scripts/match-cuts.mjs"
+    "match-cuts": "node scripts/match-cuts.mjs",
+    "transcode-clips": "node scripts/transcode-clips.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.290",
