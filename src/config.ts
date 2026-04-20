@@ -38,7 +38,7 @@ export const config = {
 
   // Frames to skip at the start of each clip (24 = 1 sec at 24fps)
   // Small values catch the beginning of motion so it peaks at the cut point
-  clipStartFrom: 12,
+  clipStartFrom: 30,
 
   // Nudge cuts forward in frames to sync with the actual beat in the audio.
   // Start at 0. If cuts land just BEFORE the beat, increase by 2–3 until it locks in.
