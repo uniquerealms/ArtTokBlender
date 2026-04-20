@@ -34,7 +34,14 @@ export const config = {
   songBpm: 166.1,
 
   // 1 = cut every beat | 0.5 = cut every half-beat (faster)
-  beatMultiplier: 1,
+  beatMultiplier: 2,
+
+  // Frames to skip at the start of each clip (24 = 1 second at 24fps)
+  // Increase to jump deeper into the motion, e.g. 48 = skip 2 seconds
+  clipStartFrom: 48,
+
+  // Artificial zoom effect (scale 1.0 → 1.35 per clip) — off matches the reference style
+  crashZoom: false,
 
   // Alternating color inversion on every other clip — set true to re-enable
   strobeEffect: false,

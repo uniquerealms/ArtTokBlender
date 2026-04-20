@@ -21,9 +21,9 @@ export const ClipSequence: React.FC<Props> = ({
     return cancel;
   }, [src]);
 
-  const scale = interpolate(frame, [0, durationInFrames], [1.0, 1.35], {
-    extrapolateRight: "clamp",
-  });
+  const scale = config.crashZoom
+    ? interpolate(frame, [0, durationInFrames], [1.0, 1.35], { extrapolateRight: "clamp" })
+    : 1;
 
   const filter =
     config.strobeEffect && sequenceIndex % 2 === 0
@@ -34,7 +34,7 @@ export const ClipSequence: React.FC<Props> = ({
     <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
       <Video
         src={staticFile(src)}
-        startFrom={24}
+        startFrom={config.clipStartFrom}
         style={{
           width: "100%",
           height: "100%",
