@@ -53,12 +53,15 @@ for (const clip of clips) {
   const sourcePath = isSymlink ? readlinkSync(linkPath) : linkPath;
   const tempPath = join(PUBLIC, `_transcoding_${clip}`);
 
-  // Skip if already small (under 50MB suggests already transcoded)
-  if (!isSymlink && statSync(linkPath).size < 50 * 1024 * 1024) {
-    console.log(`   ⏭   ${clip} — already small, skipping`);
-    done++;
-    continue;
-  }
+  // Skip if width is already ≤1080 (use ffprobe to check)
+  try {
+    const w = parseInt(execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "${linkPath}"`).toString().trim(), 10);
+    if (w && w <= 1080) {
+      console.log(`   ⏭   ${clip} — already ${w}px wide, skipping`);
+      done++;
+      continue;
+    }
+  } catch { /* ffprobe failed, proceed with transcode */ }
 
   process.stdout.write(`   ⏳  [${done + 1}/${clips.length}] ${clip} ... `);
 
