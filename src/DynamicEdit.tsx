@@ -17,21 +17,47 @@ const totalDurationInFrames = getTotalDurationInFrames(
   framesPerBeat
 );
 const numBeats = Math.round(totalDurationInFrames / framesPerBeat);
+const halfBeat = Math.round(framesPerBeat / 2);
+const { clipStartFrom } = config;
+
+// Loop structure:
+//   [Clip 0: second half] [Clip 1] [Clip 2]... [Clip N] [Clip 0: first half]
+// When YouTube loops: ...first half → second half = clip 0 plays seamlessly across the boundary.
+type SeqDef = { from: number; duration: number; clipIndex: number; startFrom: number };
+
+const sequences: SeqDef[] = [];
+
+// Opening half — clip 0 entering mid-motion
+sequences.push({ from: beatOffsetFrames, duration: halfBeat, clipIndex: 0, startFrom: clipStartFrom + halfBeat });
+
+// Middle beats — all other clips at full duration
+for (let i = 1; i < numBeats; i++) {
+  sequences.push({
+    from: beatOffsetFrames + halfBeat + (i - 1) * Math.round(framesPerBeat),
+    duration: Math.round(framesPerBeat),
+    clipIndex: i % videoClips.length,
+    startFrom: clipStartFrom,
+  });
+}
+
+// Closing half — clip 0 from the start of its motion, completes the loop
+sequences.push({
+  from: beatOffsetFrames + halfBeat + (numBeats - 1) * Math.round(framesPerBeat),
+  duration: halfBeat,
+  clipIndex: 0,
+  startFrom: clipStartFrom,
+});
 
 export const DynamicEdit: React.FC = () => {
   return (
     <div style={{ width: "100%", height: "100%", backgroundColor: "#000", position: "relative", overflow: "hidden" }}>
-      {/* Beat-cut video sequences — offset shifts the grid to lock cuts onto the beat */}
-      {Array.from({ length: numBeats }, (_, i) => (
-        <Sequence
-          key={i}
-          from={Math.round(i * framesPerBeat) + beatOffsetFrames}
-          durationInFrames={Math.round(framesPerBeat)}
-        >
+      {sequences.map((seq, i) => (
+        <Sequence key={i} from={seq.from} durationInFrames={seq.duration}>
           <ClipSequence
-            src={videoClips[i % videoClips.length]}
+            src={videoClips[seq.clipIndex]}
             sequenceIndex={i}
-            durationInFrames={Math.round(framesPerBeat)}
+            durationInFrames={seq.duration}
+            startFrom={seq.startFrom}
           />
         </Sequence>
       ))}

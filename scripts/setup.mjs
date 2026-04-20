@@ -80,7 +80,7 @@ console.log(`\n🎬  Scanning clips in: ${clipsFolder}`);
 
 const clipFiles = readdirSync(clipsFolder)
   .filter((f) => !f.startsWith("._") && VIDEO_EXTENSIONS.includes("." + f.split(".").pop().toLowerCase()))
-  .sort();
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
 
 if (clipFiles.length === 0) {
   console.error(`❌  No video files found in: ${clipsFolder}`);

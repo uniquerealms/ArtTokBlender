@@ -7,12 +7,14 @@ type Props = {
   src: string;
   sequenceIndex: number;
   durationInFrames: number;
+  startFrom: number;
 };
 
 export const ClipSequence: React.FC<Props> = ({
   src,
   sequenceIndex,
   durationInFrames,
+  startFrom,
 }) => {
   const frame = useCurrentFrame();
 
@@ -34,7 +36,7 @@ export const ClipSequence: React.FC<Props> = ({
     <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
       <Video
         src={staticFile(src)}
-        startFrom={config.clipStartFrom}
+        startFrom={startFrom}
         style={{
           width: "100%",
           height: "100%",
