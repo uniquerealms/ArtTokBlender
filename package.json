@@ -7,7 +7,8 @@
     "render": "remotion render ArtTokBlender out/video.mp4",
     "setup-audio": "node scripts/setup-audio.mjs",
     "link-clips": "node scripts/link-clips.mjs",
-    "setup": "node scripts/setup.mjs"
+    "setup": "node scripts/setup.mjs",
+    "match-cuts": "node scripts/match-cuts.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.290",
