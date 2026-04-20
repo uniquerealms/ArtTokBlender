@@ -29,43 +29,24 @@ let totalDurationInFrames: number;
 const useCutFrames = cutFrames.length >= 2;
 
 if (useCutFrames) {
-  // Waveform-driven: use real beat positions from audio analysis
+  // Waveform-driven: cutFrames[i] is the exact composition frame where beat i hits.
+  // Audio plays from frame 0, so sequence positions map 1:1 to cut positions.
   const cuts = cutFrames;
   const avgInterval = Math.round(
     cuts.slice(1).reduce((sum, f, i) => sum + (f - cuts[i]), 0) / (cuts.length - 1)
   );
   totalDurationInFrames = getTotalDurationFromCuts(cuts);
 
-  // Half of first beat interval — used to split clip 0 across the loop boundary
-  const halfFirst = Math.round((cuts.length > 1 ? cuts[1] - cuts[0] : avgInterval) / 2);
-
-  // Opening half: clip 0 enters mid-motion (second half of its motion arc)
-  sequences.push({
-    from: beatOffsetFrames,
-    duration: halfFirst,
-    clipIndex: 0,
-    startFrom: clipStartFrom + halfFirst,
-  });
-
-  // Middle sequences: one clip per detected beat interval
   for (let i = 0; i < cuts.length; i++) {
-    const from = beatOffsetFrames + halfFirst + (i === 0 ? 0 : cuts[i] - cuts[0]);
+    const from = cuts[i];
     const duration = i < cuts.length - 1 ? cuts[i + 1] - cuts[i] : avgInterval;
     sequences.push({
       from,
       duration,
-      clipIndex: (i + 1) % videoClips.length,
+      clipIndex: i % videoClips.length,
       startFrom: clipStartFrom,
     });
   }
-
-  // Closing half: clip 0 from beginning of motion — completes the loop
-  sequences.push({
-    from: totalDurationInFrames - halfFirst,
-    duration: halfFirst,
-    clipIndex: 0,
-    startFrom: clipStartFrom,
-  });
 } else {
   // BPM fallback: evenly spaced cuts from tempo calculation
   const framesPerBeat = getFramesPerBeat(songBpm, fps, beatMultiplier);
