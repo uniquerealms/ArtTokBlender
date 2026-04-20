@@ -1,18 +1,19 @@
 /**
  * setup-audio.mjs
  *
- * Place your audio file (mp3/wav/aac) or video file (mp4/mov) on the drive
- * at the path set by videoBasePath in config.ts.
- * Update config.audioSource to match the filename, then run: npm run setup-audio
+ * Run: npm run setup-audio
+ * When prompted, drag your audio file (or a video to extract audio from)
+ * into the terminal and press Enter.
  *
  * This script will:
- *  1. Locate the file on your hard drive (videoBasePath)
- *  2. Extract audio from a video file (if needed)
+ *  1. Accept a dragged file path — audio (.mp3/.wav/.aac) or video (.mp4/.mov)
+ *  2. Extract audio from a video file (if needed) → saves to public/
  *  3. Detect the BPM
- *  4. Auto-patch src/config.ts with the detected BPM and (if extracted) the new audio filename
+ *  4. Patch only songBpm in src/config.ts
  */
 
 import { createRequire } from "module";
+import { createInterface } from "readline";
 import { readFileSync, writeFileSync, unlinkSync, existsSync } from "fs";
 import { join, dirname, extname, basename } from "path";
 import { fileURLToPath } from "url";
@@ -22,40 +23,38 @@ const require = createRequire(import.meta.url);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
-// ── 1. Read audioSource from config ────────────────────────────────────────
+// ── Prompt helper ────────────────────────────────────────────────────────────
 
-const configPath = join(ROOT, "src", "config.ts");
-const configText = readFileSync(configPath, "utf8");
+function prompt(question) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      // Strip surrounding quotes and trailing whitespace that macOS adds on drag
+      resolve(answer.trim().replace(/^["']|["']$/g, "").trimEnd());
+    });
+  });
+}
 
-const sourceMatch = configText.match(/audioSource:\s*["']([^"']+)["']/);
-if (!sourceMatch) {
-  console.error("❌  Could not find audioSource in src/config.ts");
+// ── 1. Prompt for audio file ─────────────────────────────────────────────────
+
+console.log("\n🎵  Drag your audio file (or video to extract audio from) into this terminal and press Enter:");
+const audioPath = await prompt("   > ");
+
+if (!audioPath) {
+  console.error("❌  No path received. Exiting.");
   process.exit(1);
 }
 
-// Also read videoBasePath so we know where to look for the audio file
-const baseMatch = configText.match(/videoBasePath:\s*["']([^"']+)["']/);
-const videoBasePath = baseMatch ? baseMatch[1] : join(ROOT, "public");
-
-let audioSource = sourceMatch[1];
-// Look on the drive first; fall back to public/ for backwards compatibility
-let audioPath = join(videoBasePath, audioSource);
 if (!existsSync(audioPath)) {
-  audioPath = join(ROOT, "public", audioSource);
-}
-
-console.log(`\n🎵  Audio source: ${audioSource}`);
-
-// ── 2. Check the file exists ────────────────────────────────────────────────
-
-if (!existsSync(audioPath)) {
-  console.error(`❌  File not found: public/${audioSource}`);
-  console.error("    Drop your audio or video file into the public/ folder and update");
-  console.error("    config.audioSource to match the filename, then re-run this script.");
+  console.error(`❌  File not found: ${audioPath}`);
   process.exit(1);
 }
 
-// ── 3. Check FFmpeg is available ────────────────────────────────────────────
+const audioSource = basename(audioPath);
+console.log(`\n   Using: ${audioSource}`);
+
+// ── 2. Check FFmpeg is available ─────────────────────────────────────────────
 
 try {
   execSync("ffmpeg -version", { stdio: "ignore" });
@@ -64,30 +63,28 @@ try {
   process.exit(1);
 }
 
-// ── 4. Extract audio if source is a video file ──────────────────────────────
+// ── 3. Extract audio if source is a video file ───────────────────────────────
 
 const videoExtensions = [".mp4", ".mov", ".mkv", ".avi", ".webm"];
 const ext = extname(audioSource).toLowerCase();
 
 let workingAudioPath = audioPath;
-let newAudioSource = audioSource;
 
 if (videoExtensions.includes(ext)) {
   const extractedName = basename(audioSource, ext) + "_extracted.mp3";
   const extractedPath = join(ROOT, "public", extractedName);
 
-  console.log(`📼  Video detected — extracting audio to: ${extractedName}`);
+  console.log(`\n📼  Video detected — extracting audio to: public/${extractedName}`);
   execSync(
     `ffmpeg -y -i "${audioPath}" -vn -acodec libmp3lame -ar 44100 -ac 1 -q:a 2 "${extractedPath}"`,
     { stdio: "inherit" }
   );
 
   workingAudioPath = extractedPath;
-  newAudioSource = extractedName;
-  console.log(`✅  Audio extracted: ${extractedName}`);
+  console.log(`✅  Audio extracted.`);
 }
 
-// ── 5. Convert to raw mono Float32 PCM for BPM analysis ─────────────────────
+// ── 4. Convert to raw mono Float32 PCM for BPM analysis ──────────────────────
 
 const tempPcmPath = join(ROOT, "public", "_bpm_temp.pcm");
 
@@ -97,14 +94,13 @@ execSync(
   { stdio: "ignore" }
 );
 
-// ── 6. Detect BPM ────────────────────────────────────────────────────────────
+// ── 5. Detect BPM ─────────────────────────────────────────────────────────────
 
 console.log("🥁  Detecting BPM...");
 
 const MusicTempo = require("music-tempo");
 
 const pcmBuffer = readFileSync(tempPcmPath);
-// Each Float32 sample is 4 bytes
 const float32Array = new Float32Array(
   pcmBuffer.buffer,
   pcmBuffer.byteOffset,
@@ -116,29 +112,21 @@ const detectedBpm = Math.round(mt.tempo * 10) / 10;
 
 console.log(`✅  Detected BPM: ${detectedBpm}`);
 
-// ── 7. Clean up temp PCM ─────────────────────────────────────────────────────
+// ── 6. Clean up temp PCM ──────────────────────────────────────────────────────
 
 unlinkSync(tempPcmPath);
 
-// ── 8. Patch src/config.ts ───────────────────────────────────────────────────
+// ── 7. Patch only songBpm in src/config.ts ────────────────────────────────────
 
-let patched = configText.replace(
+const configPath = join(ROOT, "src", "config.ts");
+const configText = readFileSync(configPath, "utf8");
+
+const patched = configText.replace(
   /songBpm:\s*[\d.]+/,
   `songBpm: ${detectedBpm}`
 );
 
-if (newAudioSource !== audioSource) {
-  patched = patched.replace(
-    /audioSource:\s*["'][^"']+["']/,
-    `audioSource: "${newAudioSource}"`
-  );
-}
-
 writeFileSync(configPath, patched, "utf8");
 
-console.log("\n📝  src/config.ts updated:");
-console.log(`    songBpm    → ${detectedBpm}`);
-if (newAudioSource !== audioSource) {
-  console.log(`    audioSource → "${newAudioSource}"`);
-}
+console.log(`\n📝  src/config.ts updated — songBpm → ${detectedBpm}`);
 console.log("\n🚀  Ready! Run: npm run preview\n");

@@ -1,92 +1,110 @@
 /**
  * link-clips.mjs
  *
- * Creates symlinks in public/ that point to the actual files on your hard drive.
- * Remotion follows symlinks transparently — no component changes needed.
+ * Run: npm run link-clips
+ * When prompted, drag your clips folder into the terminal and press Enter.
  *
- * Run this once whenever you:
- *  - Add new clips to videoClips in config.ts
- *  - Change videoBasePath
- *  - Set up the project on a new machine
- *
- * Usage: npm run link-clips
+ * This script will:
+ *  1. Scan the dragged folder for .mp4 and .mov files
+ *  2. Create symlinks in public/ pointing to each clip on the drive
+ *  3. Update videoClips in src/config.ts with the discovered filenames
  */
 
-import { readFileSync } from "fs";
+import { createInterface } from "readline";
+import { readdirSync, readFileSync, writeFileSync } from "fs";
 import { symlink, unlink, access } from "fs/promises";
-import { join, dirname } from "path";
+import { join, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import { constants } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
+const PUBLIC = join(ROOT, "public");
 
-// ── Read config values via regex (avoids running TS) ────────────────────────
+const VIDEO_EXTENSIONS = [".mp4", ".mov", ".mkv", ".avi", ".webm"];
 
-const configText = readFileSync(join(ROOT, "src", "config.ts"), "utf8");
+// ── Prompt helper ────────────────────────────────────────────────────────────
 
-function extractString(key) {
-  const m = configText.match(new RegExp(`${key}:\\s*["']([^"']+)["']`));
-  if (!m) throw new Error(`Could not find "${key}" in src/config.ts`);
-  return m[1];
+function prompt(question) {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      // Strip surrounding quotes and whitespace that macOS adds on drag-and-drop
+      resolve(answer.trim().replace(/^["']|["']$/g, "").trimEnd());
+    });
+  });
 }
 
-function extractArray(key) {
-  const m = configText.match(new RegExp(`${key}:\\s*\\[([^\\]]+)\\]`));
-  if (!m) throw new Error(`Could not find "${key}" in src/config.ts`);
-  return [...m[1].matchAll(/["']([^"']+)["']/g)].map((x) => x[1]);
-}
+// ── 1. Prompt for clips folder ───────────────────────────────────────────────
 
-const videoBasePath = extractString("videoBasePath");
-const videoClips = extractArray("videoClips");
-const audioSource = extractString("audioSource");
+console.log("\n📂  Drag your clips folder into this terminal window and press Enter:");
+const clipsFolder = await prompt("   > ");
 
-const allFiles = [...new Set([...videoClips, audioSource])];
-
-console.log(`\n🔗  Linking from: ${videoBasePath}`);
-console.log(`    Files: ${allFiles.join(", ")}\n`);
-
-// ── Check the drive is mounted ───────────────────────────────────────────────
-
-try {
-  await access(videoBasePath, constants.F_OK);
-} catch {
-  console.error(`❌  Drive not found at: ${videoBasePath}`);
-  console.error("    Make sure the drive is plugged in and mounted, then try again.");
+if (!clipsFolder) {
+  console.error("❌  No path received. Exiting.");
   process.exit(1);
 }
 
-// ── Create symlinks ──────────────────────────────────────────────────────────
+// ── 2. Check folder exists ───────────────────────────────────────────────────
 
+try {
+  await access(clipsFolder, constants.F_OK);
+} catch {
+  console.error(`❌  Folder not found: ${clipsFolder}`);
+  process.exit(1);
+}
+
+// ── 3. Scan for video files ──────────────────────────────────────────────────
+
+const allFiles = readdirSync(clipsFolder);
+const clipFiles = allFiles
+  .filter((f) => VIDEO_EXTENSIONS.includes("." + f.split(".").pop().toLowerCase()))
+  .sort();
+
+if (clipFiles.length === 0) {
+  console.error(`❌  No video files found in: ${clipsFolder}`);
+  console.error(`    Looking for: ${VIDEO_EXTENSIONS.join(", ")}`);
+  process.exit(1);
+}
+
+console.log(`\n🎬  Found ${clipFiles.length} clip(s):`);
+clipFiles.forEach((f) => console.log(`    • ${f}`));
+
+// ── 4. Create symlinks in public/ ────────────────────────────────────────────
+
+console.log("\n🔗  Creating symlinks in public/...");
 let linked = 0;
-let skipped = 0;
 
-for (const file of allFiles) {
-  const sourcePath = join(videoBasePath, file);
-  const linkPath = join(ROOT, "public", file);
+for (const file of clipFiles) {
+  const sourcePath = join(clipsFolder, file);
+  const linkPath = join(PUBLIC, file);
 
-  // Check the source file actually exists on the drive
-  try {
-    await access(sourcePath, constants.F_OK);
-  } catch {
-    console.warn(`⚠️   Not found on drive, skipping: ${file}`);
-    skipped++;
-    continue;
-  }
-
-  // Remove stale symlink if it exists
   try {
     await unlink(linkPath);
   } catch {
-    // didn't exist, that's fine
+    // didn't exist
   }
 
   await symlink(sourcePath, linkPath);
-  console.log(`✅  Linked: public/${file} → ${sourcePath}`);
+  console.log(`   ✅  public/${file} → ${sourcePath}`);
   linked++;
 }
 
-console.log(`\n📎  Done — ${linked} linked, ${skipped} skipped.`);
-if (linked > 0) {
-  console.log("🚀  Run: npm run preview\n");
-}
+// ── 5. Update videoClips in config.ts ────────────────────────────────────────
+
+const configPath = join(ROOT, "src", "config.ts");
+const configText = readFileSync(configPath, "utf8");
+
+const clipsArrayString =
+  "[\n" + clipFiles.map((f) => `    "${f}"`).join(",\n") + ",\n  ]";
+
+const patched = configText.replace(
+  /videoClips:\s*\[[^\]]*\]/s,
+  `videoClips: ${clipsArrayString}`
+);
+
+writeFileSync(configPath, patched, "utf8");
+
+console.log(`\n📝  src/config.ts updated — videoClips now has ${clipFiles.length} file(s).`);
+console.log(`\n🚀  ${linked} symlink(s) created. Run: npm run preview\n`);
