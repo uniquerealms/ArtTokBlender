@@ -20,5 +20,5 @@ export function getTotalDurationInFrames(
   framesPerBeat: number
 ): number {
   const targetFrames = targetSeconds * fps;
-  return Math.round(targetFrames / framesPerBeat) * framesPerBeat;
+  return Math.round(Math.round(targetFrames / framesPerBeat) * framesPerBeat);
 }
