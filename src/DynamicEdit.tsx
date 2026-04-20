@@ -18,7 +18,18 @@ const {
   beatOffsetFrames,
   clipStartFrom,
   cutFrames,
+  clipOverrides,
 } = config;
+
+// Resolve per-clip startFrom by matching filename substrings against clipOverrides
+function resolveStartFrom(filename: string): number {
+  for (const [key, override] of Object.entries(clipOverrides)) {
+    if (filename.includes(key) && override.startFrom !== undefined) {
+      return override.startFrom;
+    }
+  }
+  return clipStartFrom;
+}
 
 // ── Sequence generation ───────────────────────────────────────────────────────
 
@@ -40,11 +51,12 @@ if (useCutFrames) {
   for (let i = 0; i < cuts.length; i++) {
     const from = cuts[i];
     const duration = i < cuts.length - 1 ? cuts[i + 1] - cuts[i] : avgInterval;
+    const clipIndex = i % videoClips.length;
     sequences.push({
       from,
       duration,
-      clipIndex: i % videoClips.length,
-      startFrom: clipStartFrom,
+      clipIndex,
+      startFrom: resolveStartFrom(videoClips[clipIndex]),
     });
   }
 } else {
@@ -54,20 +66,21 @@ if (useCutFrames) {
   const numBeats = Math.round(totalDurationInFrames / framesPerBeat);
   const halfBeat = Math.round(framesPerBeat / 2);
 
-  sequences.push({ from: beatOffsetFrames, duration: halfBeat, clipIndex: 0, startFrom: clipStartFrom + halfBeat });
+  sequences.push({ from: beatOffsetFrames, duration: halfBeat, clipIndex: 0, startFrom: resolveStartFrom(videoClips[0]) + halfBeat });
   for (let i = 1; i < numBeats; i++) {
+    const clipIndex = i % videoClips.length;
     sequences.push({
       from: beatOffsetFrames + halfBeat + (i - 1) * Math.round(framesPerBeat),
       duration: Math.round(framesPerBeat),
-      clipIndex: i % videoClips.length,
-      startFrom: clipStartFrom,
+      clipIndex,
+      startFrom: resolveStartFrom(videoClips[clipIndex]),
     });
   }
   sequences.push({
     from: beatOffsetFrames + halfBeat + (numBeats - 1) * Math.round(framesPerBeat),
     duration: halfBeat,
     clipIndex: 0,
-    startFrom: clipStartFrom,
+    startFrom: resolveStartFrom(videoClips[0]),
   });
 }
 
