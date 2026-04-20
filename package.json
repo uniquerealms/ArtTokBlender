@@ -6,7 +6,8 @@
     "preview": "remotion studio",
     "render": "remotion render ArtTokBlender out/video.mp4",
     "setup-audio": "node scripts/setup-audio.mjs",
-    "link-clips": "node scripts/link-clips.mjs"
+    "link-clips": "node scripts/link-clips.mjs",
+    "setup": "node scripts/link-clips.mjs && node scripts/setup-audio.mjs"
   },
   "dependencies": {
     "@remotion/cli": "4.0.290",
