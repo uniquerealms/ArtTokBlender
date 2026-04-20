@@ -113,6 +113,33 @@ console.log(`📝  config.ts — videoClips updated (${clipFiles.length} files)`
 // PART 2 — AUDIO + BPM
 // ════════════════════════════════════════════════════════════════════════════
 
+// If a folder was dragged instead of a file, find the audio/video inside it
+const AUDIO_EXTENSIONS = [".mp3", ".wav", ".aac", ".m4a", ".ogg", ...VIDEO_EXTENSIONS];
+const { statSync } = await import("fs");
+
+if (statSync(audioFilePath).isDirectory()) {
+  const found = readdirSync(audioFilePath)
+    .filter((f) => !f.startsWith("._") && AUDIO_EXTENSIONS.includes(extname(f).toLowerCase()))
+    .sort();
+  if (found.length === 0) {
+    console.error(`❌  No audio or video files found in: ${audioFilePath}`);
+    process.exit(1);
+  }
+  if (found.length === 1) {
+    audioFilePath = join(audioFilePath, found[0]);
+    console.log(`\n📁  Folder detected — using: ${found[0]}`);
+  } else {
+    console.log(`\n📁  Multiple files found in folder:`);
+    found.forEach((f, i) => console.log(`    ${i + 1}. ${f}`));
+    const choice = await prompt("   Enter number to use: ");
+    const idx = parseInt(choice, 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= found.length) {
+      console.error("❌  Invalid selection."); process.exit(1);
+    }
+    audioFilePath = join(audioFilePath, found[idx]);
+  }
+}
+
 console.log(`\n🎵  Audio file: ${basename(audioFilePath)}`);
 
 try {
