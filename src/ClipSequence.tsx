@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { interpolate, staticFile, useCurrentFrame, Video } from "remotion";
+import { interpolate, OffthreadVideo, staticFile, useCurrentFrame } from "remotion";
 import { preloadVideo } from "@remotion/preload";
 import { config } from "./config";
 
@@ -34,7 +34,7 @@ export const ClipSequence: React.FC<Props> = ({
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
-      <Video
+      <OffthreadVideo
         src={staticFile(src)}
         startFrom={startFrom}
         style={{
