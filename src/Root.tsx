@@ -1,4 +1,4 @@
-import { Composition } from "remotion";
+import { Composition, registerRoot } from "remotion";
 import { config } from "./config";
 import { DynamicEdit } from "./DynamicEdit";
 import { getFramesPerBeat, getTotalDurationInFrames } from "./utils/beatCalculator";
@@ -24,3 +24,5 @@ export const RemotionRoot: React.FC = () => {
     />
   );
 };
+
+registerRoot(RemotionRoot);
