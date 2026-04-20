@@ -21,7 +21,11 @@ const ROOT = join(__dirname, "..");
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function cleanPath(p) {
-  return p.trim().replace(/^["']|["']$/g, "").trimEnd();
+  return p
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\\(.)/g, "$1") // unescape \space \( \) etc from terminal drag
+    .trimEnd();
 }
 
 function prompt(question) {
@@ -31,10 +35,13 @@ function prompt(question) {
   });
 }
 
-// ── 1. Get reference video path ───────────────────────────────────────────────
+// ── 1. Get reference video path (from arg or prompt) ──────────────────────────
 
-console.log("\n🎬  Drag your reference video into this terminal and press Enter:");
-let refVideo = await prompt("   > ");
+let refVideo = process.argv[2] ? cleanPath(process.argv[2]) : "";
+if (!refVideo) {
+  console.log("\n🎬  Drag your reference video into this terminal and press Enter:");
+  refVideo = await prompt("   > ");
+}
 
 if (!refVideo || !existsSync(refVideo)) {
   console.error(`❌  File not found: ${refVideo}`);

@@ -31,7 +31,11 @@ const VIDEO_EXTENSIONS = [".mp4", ".mov", ".mkv", ".avi", ".webm"];
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function cleanPath(p) {
-  return p.trim().replace(/^["']|["']$/g, "").trimEnd();
+  return p
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\\(.)/g, "$1") // unescape \space \( \) etc from terminal drag
+    .trimEnd();
 }
 
 function prompt(question) {
