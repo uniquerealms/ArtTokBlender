@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { interpolate, staticFile, useCurrentFrame, Video } from "remotion";
-import { prefetch } from "@remotion/preload";
+import { preloadVideo } from "@remotion/preload";
 
 type Props = {
   src: string;
@@ -17,8 +17,8 @@ export const ClipSequence: React.FC<Props> = ({
 
   // Prefetch runs once per clip src change — prevents 4K stutter in preview
   useEffect(() => {
-    const { free } = prefetch(staticFile(src));
-    return free;
+    const cancel = preloadVideo(staticFile(src));
+    return cancel;
   }, [src]);
 
   // Crash zoom: scale grows from 1.0 → 1.35 over the clip's duration
