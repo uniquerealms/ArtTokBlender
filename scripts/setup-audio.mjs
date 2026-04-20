@@ -1,13 +1,15 @@
 /**
  * setup-audio.mjs
  *
- * Drop an audio file (mp3/wav/aac) or a video file (mp4/mov) into public/.
+ * Place your audio file (mp3/wav/aac) or video file (mp4/mov) on the drive
+ * at the path set by videoBasePath in config.ts.
  * Update config.audioSource to match the filename, then run: npm run setup-audio
  *
  * This script will:
- *  1. Extract audio from a video file (if needed)
- *  2. Detect the BPM
- *  3. Auto-patch src/config.ts with the detected BPM and (if extracted) the new audio filename
+ *  1. Locate the file on your hard drive (videoBasePath)
+ *  2. Extract audio from a video file (if needed)
+ *  3. Detect the BPM
+ *  4. Auto-patch src/config.ts with the detected BPM and (if extracted) the new audio filename
  */
 
 import { createRequire } from "module";
@@ -31,8 +33,16 @@ if (!sourceMatch) {
   process.exit(1);
 }
 
+// Also read videoBasePath so we know where to look for the audio file
+const baseMatch = configText.match(/videoBasePath:\s*["']([^"']+)["']/);
+const videoBasePath = baseMatch ? baseMatch[1] : join(ROOT, "public");
+
 let audioSource = sourceMatch[1];
-let audioPath = join(ROOT, "public", audioSource);
+// Look on the drive first; fall back to public/ for backwards compatibility
+let audioPath = join(videoBasePath, audioSource);
+if (!existsSync(audioPath)) {
+  audioPath = join(ROOT, "public", audioSource);
+}
 
 console.log(`\n🎵  Audio source: ${audioSource}`);
 
