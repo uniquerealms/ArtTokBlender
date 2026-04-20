@@ -43,9 +43,10 @@ export const DynamicEdit: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: "12%",
+          left: 0,
+          right: 0,
           display: "flex",
-          alignItems: "center",
           justifyContent: "center",
           zIndex: 100,
           pointerEvents: "none",
