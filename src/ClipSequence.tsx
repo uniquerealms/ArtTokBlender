@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { interpolate, staticFile, useCurrentFrame, Video } from "remotion";
 import { preloadVideo } from "@remotion/preload";
+import { config } from "./config";
 
 type Props = {
   src: string;
@@ -15,20 +16,17 @@ export const ClipSequence: React.FC<Props> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  // Prefetch runs once per clip src change — prevents 4K stutter in preview
   useEffect(() => {
     const cancel = preloadVideo(staticFile(src));
     return cancel;
   }, [src]);
 
-  // Crash zoom: scale grows from 1.0 → 1.35 over the clip's duration
   const scale = interpolate(frame, [0, durationInFrames], [1.0, 1.35], {
     extrapolateRight: "clamp",
   });
 
-  // Radioactive strobe: even index = psychedelic invert, odd = raw
   const filter =
-    sequenceIndex % 2 === 0
+    config.strobeEffect && sequenceIndex % 2 === 0
       ? "invert(100%) hue-rotate(90deg) saturate(300%)"
       : "none";
 
