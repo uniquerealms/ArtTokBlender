@@ -59,7 +59,7 @@ try {
 
 const allFiles = readdirSync(clipsFolder);
 const clipFiles = allFiles
-  .filter((f) => VIDEO_EXTENSIONS.includes("." + f.split(".").pop().toLowerCase()))
+  .filter((f) => !f.startsWith("._") && VIDEO_EXTENSIONS.includes("." + f.split(".").pop().toLowerCase()))
   .sort();
 
 if (clipFiles.length === 0) {
