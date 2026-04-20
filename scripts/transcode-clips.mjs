@@ -53,21 +53,13 @@ for (const clip of clips) {
   const sourcePath = isSymlink ? readlinkSync(linkPath) : linkPath;
   const tempPath = join(PUBLIC, `_transcoding_${clip}`);
 
-  // Skip if width is already ≤1080 (use ffprobe to check)
-  try {
-    const w = parseInt(execSync(`ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 "${linkPath}"`).toString().trim(), 10);
-    if (w && w <= 1080) {
-      console.log(`   ⏭   ${clip} — already ${w}px wide, skipping`);
-      done++;
-      continue;
-    }
-  } catch { /* ffprobe failed, proceed with transcode */ }
-
+  // Always transcode — even existing 1080p files need re-encoding to add per-second keyframes for fast seeking
   process.stdout.write(`   ⏳  [${done + 1}/${clips.length}] ${clip} ... `);
 
   try {
+    // -g 24 forces a keyframe every second so Remotion can seek to any frame instantly
     execSync(
-      `ffmpeg -y -i "${sourcePath}" -vf "scale=-2:1920" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -an "${tempPath}"`,
+      `ffmpeg -y -i "${sourcePath}" -vf "scale=-2:1920" -c:v libx264 -preset fast -crf 20 -g 24 -keyint_min 24 -force_key_frames "expr:gte(t,n_forced*1)" -pix_fmt yuv420p -an "${tempPath}"`,
       { stdio: "ignore" }
     );
 
